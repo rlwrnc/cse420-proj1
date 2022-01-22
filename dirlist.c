@@ -1,3 +1,6 @@
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,18 +96,16 @@ void print_list(dll *list)
 
 /* sorting algorithms */
 
+void print_structure(char *path)
+{
+    
+}
 
 
 /* main */
 
 int main(int argc, char **argv)
 {
-    dll *list = create_list();
-    insert_tail(create_node("hello", 0), list);
-    insert_tail(create_node("world", 1), list);
-    insert_tail(create_node("!", 2), list);
-    insert_tail(create_node("\\n", 1), list);
-    print_list(list);
-    destroy_list(list);
+    print_structure("/home/raymond/School/S22/420/hw/cse420-proj1/");
     return 0;
 }
