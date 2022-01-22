@@ -96,9 +96,23 @@ void print_list(dll *list)
 
 /* sorting algorithms */
 
-void print_structure(char *path)
+void print_structure(char *path)  //the recursion is wack with this one
 {
-    
+    DIR *ds = opendir(path);
+    char *tmp; 
+    struct dirent *d;
+    struct stat *buf;
+    while ((d = readdir(ds)) != NULL) {
+        if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
+            continue;
+        tmp = strdup(path);
+        strcat(tmp, d->d_name);
+        stat(tmp, buf);
+        if (S_ISDIR(buf->st_mode)) 
+            print_structure(tmp);
+        printf("%s\n", tmp);
+    }
+    closedir(ds);
 }
 
 
@@ -106,6 +120,6 @@ void print_structure(char *path)
 
 int main(int argc, char **argv)
 {
-    print_structure("/home/raymond/School/S22/420/hw/cse420-proj1/");
+    print_structure("/home/raymond/cse420-proj1/");
     return 0;
 }
