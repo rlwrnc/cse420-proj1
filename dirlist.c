@@ -65,6 +65,50 @@ void insert_tail(dnode *node, dll *list)
     list->length++;
 }
 
+void insert_sorted(dnode *node, dll *list)
+{
+    if (list->head == NULL && list->tail == NULL) {
+        list->head = node;
+        list->tail = node;
+    } else if (strcmp(node->path, list->head->path) <= 0) {
+        node->next = list->head;
+        list->head->prev = node;
+        list->head = node;
+    } else if (strcmp(node->path, list->head->path) > 0) {
+        list->tail->next = node;
+        node->prev = list->tail;
+        list->tail = node;
+    } else {
+        dnode *ptr = list->head;
+        while (ptr != NULL) {
+            if (strcmp(node->path, ptr->path) <= 0) {
+                node->next = ptr;
+                node->prev = ptr->prev;
+                ptr->prev->next = node;
+                ptr->prev = node;
+            }
+            ptr = ptr->next;
+        }
+    }
+}
+
+/*
+ *   populate_list
+ *   populates a linked list with the contents of a supplied directory
+ */
+
+void populate_list(dll *list, char *path)   // see print_structure for inspiration
+{
+    DIR *ds = opendir(path);
+    char tmp[255];
+    struct dirent *d;
+    struct stat buf;
+    while ((d = readdir(ds)) != NULL) {
+        if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
+            continue;
+    }
+}
+
 //destroy
 
 void destroy_list(dll *list)
@@ -96,19 +140,20 @@ void print_list(dll *list)
 
 /* sorting algorithms */
 
-void print_structure(char *path)  //the recursion is wack with this one
+void print_structure(char *path)
 {
     DIR *ds = opendir(path);
-    char *tmp; 
+    char tmp[255];
     struct dirent *d;
-    struct stat *buf;
+    struct stat buf;
     while ((d = readdir(ds)) != NULL) {
         if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
             continue;
-        tmp = strdup(path);
+        strcpy(tmp, path);
+        strcat(tmp, "/");
         strcat(tmp, d->d_name);
-        stat(tmp, buf);
-        if (S_ISDIR(buf->st_mode)) 
+        stat(tmp, &buf);
+        if (S_ISDIR(buf.st_mode)) 
             print_structure(tmp);
         printf("%s\n", tmp);
     }
@@ -120,6 +165,29 @@ void print_structure(char *path)  //the recursion is wack with this one
 
 int main(int argc, char **argv)
 {
-    print_structure("/home/raymond/cse420-proj1/");
+    if (argc != 3) {
+        printf("usage: dirlist directory_path output_file\n");
+        return -1;
+    }
+
+    char *dirpath = argv[1];
+    char *outfile = argv[2];
+    dll *dirlist = create_list();
+
+
+    /*
+    DIR *ds = opendir(path);
+    char *tmp;
+    struct dirent *d;
+    while ((d = readdir(ds)) != NULL) {
+        tmp = strdup(path);
+        strcat(tmp, "/");
+        strcat(tmp, d->d_name);
+        printf("%s\n", tmp);
+    }
+    free(tmp);
+    closedir(ds);
+    */
+
     return 0;
 }
