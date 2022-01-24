@@ -173,21 +173,5 @@ int main(int argc, char **argv)
     char *dirpath = argv[1];
     char *outfile = argv[2];
     dll *dirlist = create_list();
-
-
-    /*
-    DIR *ds = opendir(path);
-    char *tmp;
-    struct dirent *d;
-    while ((d = readdir(ds)) != NULL) {
-        tmp = strdup(path);
-        strcat(tmp, "/");
-        strcat(tmp, d->d_name);
-        printf("%s\n", tmp);
-    }
-    free(tmp);
-    closedir(ds);
-    */
-
     return 0;
 }
