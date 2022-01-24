@@ -70,18 +70,18 @@ void insert_sorted(dnode *node, dll *list)
     if (list->head == NULL && list->tail == NULL) {
         list->head = node;
         list->tail = node;
-    } else if (strcmp(node->path, list->head->path) <= 0) {
+    } else if (strcmp(node->path, list->head->path) < 0) {
         node->next = list->head;
         list->head->prev = node;
         list->head = node;
-    } else if (strcmp(node->path, list->head->path) > 0) {
+    } else if (strcmp(node->path, list->head->path) >= 0) {
         list->tail->next = node;
         node->prev = list->tail;
         list->tail = node;
     } else {
         dnode *ptr = list->head;
         while (ptr != NULL) {
-            if (strcmp(node->path, ptr->path) <= 0) {
+            if (strcmp(node->path, ptr->path) < 0) {
                 node->next = ptr;
                 node->prev = ptr->prev;
                 ptr->prev->next = node;
@@ -105,11 +105,11 @@ void populate_list(char *path, dll *list)   // see print_structure for inspirati
         level++;
     }
     DIR *ds = opendir(path);
-    char tmp[255];
+    char tmp[511];
     struct dirent *d;
     struct stat buf;
     while ((d = readdir(ds)) != NULL) {
-        if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
+        if (d->d_name[0] == '.')
             continue;
         strcpy(tmp, path);
         strcat(tmp, "/");
@@ -181,7 +181,7 @@ void insertion_sort_by_level_increasing(dll *list)
     while (fi != NULL) {
         key = fi->level;
         bi = fi;
-        while (bi->prev != NULL && bi->prev->level >= key)
+        while (bi->prev != NULL && bi->prev->level > key)
             bi = bi->prev;
         tmp = fi;
         fi = fi->next;
