@@ -97,8 +97,13 @@ void insert_sorted(dnode *node, dll *list)
  *   populates a linked list with the contents of a supplied directory
  */
 
-void populate_list(dll *list, char *path)   // see print_structure for inspiration
+void populate_list(char *path, dll *list)   // see print_structure for inspiration
 {
+    static int level = 1;
+    if (level == 1) {                                           //for first level case
+        insert_sorted(create_node(path, level), list);
+        level++;
+    }
     DIR *ds = opendir(path);
     char tmp[255];
     struct dirent *d;
@@ -106,7 +111,18 @@ void populate_list(dll *list, char *path)   // see print_structure for inspirati
     while ((d = readdir(ds)) != NULL) {
         if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
             continue;
+        strcpy(tmp, path);
+        strcat(tmp, "/");
+        strcat(tmp, d->d_name);
+        stat(tmp, &buf);
+        insert_sorted(create_node(tmp, level), list);
+        if (S_ISDIR(buf.st_mode)) {                             //if the file is a directory, call the function one directory deeper
+            level++;
+            populate_list(tmp, list);
+            level--;
+        }
     }
+    closedir(ds);
 }
 
 //destroy
@@ -130,16 +146,13 @@ void print_list(dll *list)
 {
     dnode *curr = list->head;
     while (curr != NULL) {
-        if (curr != list->head)
-            printf("->");
-        printf("(%s, %d)", curr->path, curr->level);
+        printf("%d:%s\n", curr->level, curr->path);
         curr = curr->next;
     }
-    printf("\nThe list contains %d elements.\n", list->length);
 }
 
 /* sorting algorithms */
-
+/*
 void print_structure(char *path)
 {
     DIR *ds = opendir(path);
@@ -159,7 +172,7 @@ void print_structure(char *path)
     }
     closedir(ds);
 }
-
+*/
 
 /* main */
 
@@ -173,5 +186,7 @@ int main(int argc, char **argv)
     char *dirpath = argv[1];
     char *outfile = argv[2];
     dll *dirlist = create_list();
+    populate_list(dirpath, dirlist);
+    print_list(dirlist);
     return 0;
 }
