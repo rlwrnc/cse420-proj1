@@ -156,6 +156,22 @@ void print_list(dll *list)
     }
 }
 
+void print_list_to_file(dll *list, char *filename)
+{
+    int order;
+    dnode *curr = list->head;
+    FILE *fs = fopen(filename, "w");
+    while (curr != NULL) {
+        if (curr->prev != NULL && curr->level == curr->prev->level)
+            order++;
+        else
+            order = 1;
+        fprintf(fs, "%d:%d:%s\n", curr->level, order, curr->path);
+        curr = curr->next;
+    }
+    fclose(fs); 
+}
+
 /* sorting algorithms */
 
 void insertion_sort_by_level_increasing(dll *list)
@@ -201,7 +217,7 @@ int main(int argc, char **argv)
     dll *dirlist = create_list();
     populate_list(dirpath, dirlist);
     insertion_sort_by_level_increasing(dirlist);
-    print_list(dirlist);
+    print_list_to_file(dirlist, outfile);
     destroy_list(dirlist);
     return 0;
 }
