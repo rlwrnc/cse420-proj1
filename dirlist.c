@@ -144,35 +144,48 @@ void destroy_list(dll *list)
 
 void print_list(dll *list)
 {
+    int order;
     dnode *curr = list->head;
     while (curr != NULL) {
-        printf("%d:%s\n", curr->level, curr->path);
+        if (curr->prev != NULL && curr->level == curr->prev->level)
+            order++;
+        else
+            order = 1;
+        printf("%d:%d:%s\n", curr->level, order, curr->path);
         curr = curr->next;
     }
 }
 
 /* sorting algorithms */
-/*
-void print_structure(char *path)
+
+void insertion_sort_by_level_increasing(dll *list)
 {
-    DIR *ds = opendir(path);
-    char tmp[255];
-    struct dirent *d;
-    struct stat buf;
-    while ((d = readdir(ds)) != NULL) {
-        if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
-            continue;
-        strcpy(tmp, path);
-        strcat(tmp, "/");
-        strcat(tmp, d->d_name);
-        stat(tmp, &buf);
-        if (S_ISDIR(buf.st_mode)) 
-            print_structure(tmp);
-        printf("%s\n", tmp);
+    dnode *fi = list->head->next, *bi, *tmp;
+    int key;
+    while (fi != NULL) {
+        key = fi->level;
+        bi = fi;
+        while (bi->prev != NULL && bi->prev->level >= key)
+            bi = bi->prev;
+        tmp = fi;
+        fi = fi->next;
+        if (bi != tmp) {
+            if (tmp == list->tail)
+                list->tail = tmp->prev;
+            else
+                tmp->next->prev = tmp->prev;
+            tmp->prev->next = tmp->next;
+
+            tmp->next = bi;
+            tmp->prev = bi->prev;
+            if (bi == list->head)
+                list->head = tmp;
+            else
+                bi->prev->next = tmp;
+            bi->prev = tmp;
+        }
     }
-    closedir(ds);
 }
-*/
 
 /* main */
 
@@ -187,6 +200,8 @@ int main(int argc, char **argv)
     char *outfile = argv[2];
     dll *dirlist = create_list();
     populate_list(dirpath, dirlist);
+    insertion_sort_by_level_increasing(dirlist);
     print_list(dirlist);
+    destroy_list(dirlist);
     return 0;
 }
