@@ -67,21 +67,21 @@ void insert_tail(dnode *node, dll *list)
 
 void insert_sorted(dnode *node, dll *list)
 {
-    if (list->head == NULL && list->tail == NULL) {
+    if (list->head == NULL && list->tail == NULL) {             //if list empty
         list->head = node;
         list->tail = node;
-    } else if (strcmp(node->path, list->head->path) < 0) {
+    } else if (strcmp(node->path, list->head->path) < 0) {      //if desired position is at head
         node->next = list->head;
         list->head->prev = node;
         list->head = node;
-    } else if (strcmp(node->path, list->head->path) >= 0) {
+    } else if (strcmp(node->path, list->head->path) > 0) {      //if desired position is at tail
         list->tail->next = node;
         node->prev = list->tail;
         list->tail = node;
     } else {
         dnode *ptr = list->head;
         while (ptr != NULL) {
-            if (strcmp(node->path, ptr->path) < 0) {
+            if (strcmp(node->path, ptr->path) > 0) {
                 node->next = ptr;
                 node->prev = ptr->prev;
                 ptr->prev->next = node;
