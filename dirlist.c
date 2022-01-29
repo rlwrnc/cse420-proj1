@@ -1,34 +1,33 @@
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-/* Linked List implementation w/ subroutines */
+#include <ctype.h>
 
-typedef struct dnode dnode;
-struct dnode {
-    char *path;             //absolute path of directory
-    int level;              //level of path relative to head
-    dnode *next;            //next node in list
-    dnode *prev;            //previous node in list
-};                          //directory node
+/* linked list w/ subroutines */
 
-typedef struct dll dll;
-struct dll {
-    dnode *head;    //points to first node
-    dnode *tail;    //points to last node
-    int length;     //number of nodes
-};                  //doubly linked list
+struct node {
+    char *path;
+    int level;
+    struct node *next;
+    struct node *prev;
+};
+
+struct list {
+    struct node *head;
+    struct node *tail;
+};
 
 //creation subroutines
 
-dnode *create_node(char *path, int level) 
+struct node *create_node(char *path, int level)
 {
-    dnode *node = malloc(sizeof(dnode));
+    struct node *node = malloc(sizeof(struct node));
     if (node == NULL) {
-        fprintf(stderr, "%s: Couldn't create memory for the list; %s\n", "dirlist", strerror(errno));
+        fprintf(stderr, "%s: couldn't create memory for list; %s\n", "dirlist", strerror(errno));
         exit(-1);
     }
     node->path = strdup(path);
@@ -38,99 +37,80 @@ dnode *create_node(char *path, int level)
     return node;
 }
 
-dll *create_list() {
-    dll *list = malloc(sizeof(dll));
+struct list *create_list()
+{
+    struct list *list = malloc(sizeof(struct list));
     if (list == NULL) {
-        fprintf(stderr, "%s: Couldn't create memory for the list; %s\n", "dirlist", strerror(errno));
+        fprintf(stderr, "%s: couldn't create memory for list; %s\n", "dirlist", strerror(errno));
         exit(-1);
     }
     list->head = NULL;
     list->tail = NULL;
-    list->length = 0;
     return list;
 }
 
-//additions
+//inserts
 
-void insert_tail(dnode *node, dll *list)
+void insert_sorted(struct node *node, struct list *list)
 {
     if (list->head == NULL && list->tail == NULL) {
         list->head = node;
         list->tail = node;
-    } else {
-        list->tail->next = node;
-        list->tail = node;
-        list->tail = node;
-    }
-    list->length++;
-}
-
-void insert_sorted(dnode *node, dll *list)
-{
-    if (list->head == NULL && list->tail == NULL) {             //if list empty
-        list->head = node;
-        list->tail = node;
-    } else if (strcmp(node->path, list->head->path) < 0) {      //if desired position is at head
-        node->next = list->head;
+    } else if (strcmp(node->path, list->head->path) <= 0) {
         list->head->prev = node;
+        node->next = list->head;
         list->head = node;
-    } else if (strcmp(node->path, list->head->path) > 0) {      //if desired position is at tail
+    } else if (strcmp(node->path, list->tail->path) > 0) {
         list->tail->next = node;
         node->prev = list->tail;
         list->tail = node;
     } else {
-        dnode *ptr = list->head;
-        while (ptr != NULL) {
-            if (strcmp(node->path, ptr->path) > 0) {
-                node->next = ptr;
-                node->prev = ptr->prev;
-                ptr->prev->next = node;
-                ptr->prev = node;
-            }
+        struct node *ptr = list->head;
+        while (ptr->next != NULL && strcmp(node->path, ptr->path) > 0)
             ptr = ptr->next;
-        }
+        node->next = ptr;
+        node->prev = ptr->prev;
+        ptr->prev->next = node;
+        ptr->prev = node;
     }
 }
 
-/*
- *   populate_list
- *   populates a linked list with the contents of a supplied directory
- */
-
-void populate_list(char *path, dll *list)   // see print_structure for inspiration
+void populate_list(char *path, struct list *list)
 {
-    static int level = 1;
-    if (level == 1) {                                           //for first level case
-        insert_sorted(create_node(path, level), list);
-        level++;
+    static int current_level = 1;
+    if (current_level == 1) {
+        insert_sorted(create_node(path, current_level), list);
+        current_level++;
     }
     DIR *ds = opendir(path);
-    char tmp[511];
+    char tmp[255];
     struct dirent *d;
     struct stat buf;
     while ((d = readdir(ds)) != NULL) {
-        if (d->d_name[0] == '.')
+        if (d->d_name[0] == '.')    //if hidden file, continue
             continue;
+        
+        /* create a temporary string containing {PATH}/{DIRECTORY NAME} */
         strcpy(tmp, path);
         strcat(tmp, "/");
         strcat(tmp, d->d_name);
-        stat(tmp, &buf);
-        insert_sorted(create_node(tmp, level), list);
-        if (S_ISDIR(buf.st_mode)) {                             //if the file is a directory, call the function one directory deeper
-            level++;
+        
+        stat(tmp, &buf);            //populate buf with file information
+        insert_sorted(create_node(tmp, current_level), list);
+        if (S_ISDIR(buf.st_mode)) {
+            current_level++;
             populate_list(tmp, list);
-            level--;
+            current_level--;
         }
     }
     closedir(ds);
 }
 
-//destroy
+//deletions
 
-void destroy_list(dll *list)
+void destroy_list(struct list *list)
 {
-    dnode *curr = list->head;
-    dnode *tmp;
+    struct node *curr = list->head, *tmp;
     while (curr != NULL) {
         free(curr->path);
         tmp = curr;
@@ -140,26 +120,12 @@ void destroy_list(dll *list)
     free(list);
 }
 
-//print
+//prints
 
-void print_list(dll *list)
+void print_list_to_file(struct list *list, char *filename)
 {
     int order;
-    dnode *curr = list->head;
-    while (curr != NULL) {
-        if (curr->prev != NULL && curr->level == curr->prev->level)
-            order++;
-        else
-            order = 1;
-        printf("%d:%d:%s\n", curr->level, order, curr->path);
-        curr = curr->next;
-    }
-}
-
-void print_list_to_file(dll *list, char *filename)
-{
-    int order;
-    dnode *curr = list->head;
+    struct node *curr = list->head;
     FILE *fs = fopen(filename, "w");
     while (curr != NULL) {
         if (curr->prev != NULL && curr->level == curr->prev->level)
@@ -169,37 +135,30 @@ void print_list_to_file(dll *list, char *filename)
         fprintf(fs, "%d:%d:%s\n", curr->level, order, curr->path);
         curr = curr->next;
     }
-    fclose(fs); 
+    fclose(fs);
 }
 
-/* sorting algorithms */
-
-void insertion_sort_by_level_increasing(dll *list)
+void insertion_sort_by_level_increasing(struct list *list)
 {
-    dnode *fi = list->head->next, *bi, *tmp;
+    struct node *fi = list->head->next, *bi, *tmp;
     int key;
     while (fi != NULL) {
         key = fi->level;
-        bi = fi;
-        while (bi->prev != NULL && bi->prev->level > key)
-            bi = bi->prev;
+        bi = fi->prev;
         tmp = fi;
         fi = fi->next;
-        if (bi != tmp) {
-            if (tmp == list->tail)
-                list->tail = tmp->prev;
-            else
-                tmp->next->prev = tmp->prev;
-            tmp->prev->next = tmp->next;
+        while (bi != list->head && bi->level > key)
+            bi = bi->prev;
 
-            tmp->next = bi;
-            tmp->prev = bi->prev;
-            if (bi == list->head)
-                list->head = tmp;
-            else
-                bi->prev->next = tmp;
-            bi->prev = tmp;
-        }
+        //remove tmp and place it after bi 
+        if (tmp->next != NULL)
+            tmp->next->prev = tmp->prev;
+        tmp->prev->next = tmp->next;
+        tmp->next = bi->next;
+        tmp->prev = bi;
+        if (bi->next != NULL)
+            bi->next->prev = tmp;
+        bi->next = tmp;
     }
 }
 
@@ -208,16 +167,15 @@ void insertion_sort_by_level_increasing(dll *list)
 int main(int argc, char **argv)
 {
     if (argc != 3) {
-        printf("usage: dirlist directory_path output_file\n");
+        printf("usage: dirlist directory_path file_name\n");
         return -1;
     }
 
-    char *dirpath = argv[1];
-    char *outfile = argv[2];
-    dll *dirlist = create_list();
+    char *dirpath = argv[1], *outfile = argv[2];
+    struct list *dirlist = create_list();
     populate_list(dirpath, dirlist);
     insertion_sort_by_level_increasing(dirlist);
-    print_list_to_file(dirlist, outfile);
+    print_list_to_file(dirlist, outfile);    
     destroy_list(dirlist);
     return 0;
 }
